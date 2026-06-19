@@ -4,3 +4,6 @@ node_modules/
 __pycache__/
 dist/
 build/
+uploads/
+reports/
+chroma_db/

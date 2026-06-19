@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter  #to organise routes
 from fastapi import HTTPException
 
 from models.user import(
@@ -39,7 +39,7 @@ def register(user:UserRegister):
             
         )
     
-    hashed_pssowrd=hash_password(
+    hashed_password=hash_password(
         user.password
     )
     

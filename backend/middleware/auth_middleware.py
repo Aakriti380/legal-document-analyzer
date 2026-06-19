@@ -5,7 +5,7 @@ from fastapi import (
 
 from fastapi.security import(
     HTTPBearer,
-    HTTPauthorizationCredentials
+    HTTPAuthorizationCredentials
 )
 
 from jose import jwt, JWTError

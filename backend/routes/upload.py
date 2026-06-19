@@ -5,7 +5,6 @@ from fastapi import (
     Depends
 )
 
-import os
 import uuid
 
 from middleware.auth_middleware import (
@@ -13,7 +12,7 @@ from middleware.auth_middleware import (
 )
 
 from services.pdf_parser import (
-    extract_text_from_pdf
+    extract_pages
 )
 
 from services.chunker import (
@@ -33,10 +32,11 @@ router = APIRouter(
     tags=["Upload"]
 )
 
+
 @router.post("/")
 async def upload_document(
     file: UploadFile = File(...),
-    current_user = Depends(get_current_user)
+    current_user=Depends(get_current_user)
 ):
 
     file_id = str(uuid.uuid4())
@@ -46,28 +46,47 @@ async def upload_document(
     with open(file_path, "wb") as buffer:
         buffer.write(await file.read())
 
-    text = extract_text_from_pdf(file_path)
+    pages = extract_pages(file_path)
 
-    chunks = create_chunks(text)
+    total_chunks = 0
 
-    for idx, chunk in enumerate(chunks):
+    for page in pages:
 
-        embedding = embedding_model.embed_query(
-            chunk
+        page_number = page["page_number"]
+
+        chunks = create_chunks(
+            page["text"]
         )
 
-        collection.add(
-            ids=[f"{file_id}_{idx}"],
-            embeddings=[embedding],
-            documents=[chunk],
-            metadatas=[{
-                "file_id": file_id,
-                "user_id": current_user["user_id"]
-            }]
-        )
+        total_chunks += len(chunks)
+
+        for idx, chunk in enumerate(chunks):
+
+            embedding = embedding_model.embed_query(
+                chunk
+            )
+
+            collection.add(
+                ids=[
+                    f"{file_id}_{page_number}_{idx}"
+                ],
+                embeddings=[
+                    embedding
+                ],
+                documents=[
+                    chunk
+                ],
+                metadatas=[{
+                    "file_id": file_id,
+                    "user_id": current_user["user_id"],
+                    "page_number": page_number,
+                    "chunk_index": idx,
+                    "document_name": file.filename
+                }]
+            )
 
     return {
         "message": "Document indexed successfully",
         "file_id": file_id,
-        "chunks": len(chunks)
+        "chunks": total_chunks
     }
